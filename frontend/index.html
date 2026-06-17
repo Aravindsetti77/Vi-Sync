@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letterboxd Vibe Sync</title>
+    <!-- Use Inter font for a modern look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f9f9f9;
+            --text-color: #333333;
+            --accent: #111111;
+            --card-bg: #ffffff;
+            --border-color: #dddddd;
+            --muted-text: #666666;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        h1 {
+            color: var(--accent);
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: -1px;
+        }
+
+        p.subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 3rem;
+            color: var(--muted-text);
+        }
+
+        .search-wrapper {
+            position: relative;
+            margin-bottom: 2rem;
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            align-items: stretch;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            min-width: 250px;
+            padding: 1rem 1.5rem;
+            font-size: 1.1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            outline: none;
+            transition: border-color 0.2s ease;
+            font-family: inherit;
+        }
+
+        input[type="text"]::placeholder {
+            color: #999999;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #ffffff;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background-color: #333333;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            color: #666666;
+            cursor: not-allowed;
+        }
+
+        /* Result Card */
+        #result-container {
+            display: none;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        #result-container.show {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .mode-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .mode-toggle button {
+            background-color: transparent;
+            color: var(--muted-text);
+            border: 2px solid transparent;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+        }
+
+        .mode-toggle button.active {
+            color: var(--accent);
+            border-bottom: 2px solid var(--accent);
+            border-radius: 0;
+        }
+
+        .mode-toggle button:hover {
+            color: var(--accent);
+            background: transparent;
+        }
+
+        .group-input-row {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.8rem;
+            width: 100%;
+        }
+
+        .remove-user-btn {
+            background: #fdf7f7;
+            color: #d9534f;
+            border: 1px solid #f5c6cb;
+            padding: 0 1.2rem;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-user-btn:hover {
+            background: #d9534f;
+            color: white;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 2.5rem;
+            border: 1px solid var(--border-color);
+            margin-top: 1rem;
+        }
+
+        .movie-title {
+            color: var(--accent);
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .reason {
+            font-style: italic;
+            margin: 1.5rem 0 2rem 0;
+            background-color: #f4f4f4;
+            padding: 1.2rem;
+            border-radius: 6px;
+            color: var(--muted-text);
+            line-height: 1.5;
+            border-left: 4px solid var(--accent);
+        }
+
+        .view-btn {
+            display: inline-block;
+            background-color: transparent;
+            color: var(--accent);
+            padding: 0.8rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            border: 1px solid var(--accent);
+            transition: all 0.2s ease;
+        }
+
+        .view-btn:hover {
+            background-color: var(--accent);
+            color: #ffffff;
+        }
+
+        /* Loading Spinner */
+        .loader {
+            display: none;
+            border: 3px solid #f3f3f3;
+            border-left-color: var(--accent);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: #d9534f;
+            margin-top: 1rem;
+            font-weight: bold;
+            display: none;
+            background: #fdf7f7;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Letterboxd Vibe Sync</h1>
+        <p class="subtitle">Find the perfect movie from your watchlist based on your recent activity.</p>
+
+        <div class="mode-toggle">
+            <button id="single-mode-btn" class="active" onclick="setMode('single')">Single User</button>
+            <button id="group-mode-btn" onclick="setMode('group')">Group Match</button>
+        </div>
+
+        <div id="single-search" class="search-wrapper">
+            <input type="text" id="username" placeholder="Letterboxd Username" aria-label="Letterboxd Username"
+                autocomplete="off" spellcheck="false">
+            <button id="submit-btn" onclick="fetchRecommendation()">Search</button>
+        </div>
+
+        <div id="group-search" class="search-wrapper" style="display: none; flex-direction: column;">
+            <div id="group-inputs">
+                <div class="group-input-row">
+                    <input type="text" class="group-username" placeholder="User 1" autocomplete="off"
+                        spellcheck="false">
+                </div>
+                <div class="group-input-row">
+                    <input type="text" class="group-username" placeholder="User 2" autocomplete="off"
+                        spellcheck="false">
+                </div>
+            </div>
+            <div class="group-actions" style="display: flex; gap: 1rem; justify-content: center; margin-top: 0.5rem;">
+                <button type="button" onclick="addGroupUser()"
+                    style="background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 0.5rem 1rem;">+
+                    Add User</button>
+                <button id="group-submit-btn" onclick="fetchGroupRecommendation()">Group Search</button>
+            </div>
+        </div>
+
+        <div class="loader" id="loader"></div>
+        <div class="error" id="error-msg"></div>
+
+        <div id="result-container">
+            <div class="card">
+                <div class="movie-title" id="rec-title"></div>
+                <div class="reason" id="rec-reason"></div>
+                <a href="#" id="rec-link" target="_blank" class="view-btn">View on Letterboxd</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'single';
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('single-mode-btn').classList.toggle('active', mode === 'single');
+            document.getElementById('group-mode-btn').classList.toggle('active', mode === 'group');
+            document.getElementById('single-search').style.display = mode === 'single' ? 'flex' : 'none';
+            document.getElementById('group-search').style.display = mode === 'group' ? 'flex' : 'none';
+
+            document.getElementById('error-msg').style.display = 'none';
+            document.getElementById('result-container').classList.remove('show');
+        }
+
+        function addGroupUser() {
+            const container = document.getElementById('group-inputs');
+            const userCount = container.children.length + 1;
+
+            const row = document.createElement('div');
+            row.className = 'group-input-row';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'group-username';
+            input.placeholder = `User ${userCount}`;
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'remove-user-btn';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.onclick = function () {
+                container.removeChild(row);
+                updatePlaceholders();
+            };
+
+            row.appendChild(input);
+            row.appendChild(removeBtn);
+            container.appendChild(row);
+        }
+
+        function updatePlaceholders() {
+            const inputs = document.querySelectorAll('.group-username');
+            inputs.forEach((input, index) => {
+                input.placeholder = `User ${index + 1}`;
+            });
+        }
+
+        async function handleResponse(response) {
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error("Could not find a watchlist for one or more users. Make sure usernames are correct and public.");
+                } else {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || "Failed to fetch recommendation from the server.");
+                }
+            }
+
+            const data = await response.json();
+            const rec = data.recommendation;
+
+            // Update UI with recommendation
+            document.getElementById('rec-title').textContent = rec.title;
+            document.getElementById('rec-reason').textContent = `"${rec.reason}"`;
+            document.getElementById('rec-link').href = rec.link;
+
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('result-container');
+
+            // Hide loader and show result with animation
+            loader.style.display = 'none';
+            resultContainer.style.display = 'block';
+
+            // Trigger reflow for CSS animation
+            void resultContainer.offsetWidth;
+            resultContainer.classList.add('show');
+        }
+
+        async function fetchGroupRecommendation() {
+            const inputs = document.querySelectorAll('.group-username');
+            const usernames = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('result-container');
+            const errorMsg = document.getElementById('error-msg');
+            const btn = document.getElementById('group-submit-btn');
+
+            if (usernames.length < 2) {
+                errorMsg.textContent = "Please enter at least two Letterboxd usernames.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // Reset UI State
+            errorMsg.style.display = 'none';
+            resultContainer.classList.remove('show');
+            loader.style.display = 'block';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:8000/api/group_recommend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ usernames })
+                });
+                await handleResponse(response);
+            } catch (error) {
+                loader.style.display = 'none';
+                errorMsg.textContent = error.message;
+                errorMsg.style.display = 'block';
+                if (error.message.includes("Failed to fetch")) {
+                    errorMsg.textContent = "Failed to connect to the backend server. Make sure the FastAPI app is running on port 8000.";
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function fetchRecommendation() {
+            const usernameInput = document.getElementById('username').value.trim();
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('result-container');
+            const errorMsg = document.getElementById('error-msg');
+            const btn = document.getElementById('submit-btn');
+
+            if (!usernameInput) {
+                errorMsg.textContent = "Please enter a valid Letterboxd username.";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            // Reset UI State
+            errorMsg.style.display = 'none';
+            resultContainer.classList.remove('show');
+            loader.style.display = 'block';
+            btn.disabled = true;
+
+            try {
+                // Remove 'https://' if the user pasted a full URL
+                const cleanUsername = usernameInput.replace(/^https?:\/\/(www\.)?letterboxd\.com\//, '').replace(/\//g, '');
+
+                // Call the FastAPI backend running locally
+                const response = await fetch(`http://127.0.0.1:8000/api/recommend`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username_or_url: usernameInput })
+                });
+
+                await handleResponse(response);
+
+            } catch (error) {
+                loader.style.display = 'none';
+                errorMsg.textContent = error.message;
+                errorMsg.style.display = 'block';
+
+                // If there's a connection error (backend not running)
+                if (error.message.includes("Failed to fetch")) {
+                    errorMsg.textContent = "Failed to connect to the backend server. Make sure the FastAPI app is running on port 8000.";
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Allow Enter key to submit
+        document.getElementById('username').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                fetchRecommendation();
+            }
+        });
+    </script>
+</body>
+
+</html>

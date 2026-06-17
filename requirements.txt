@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+feedparser
+beautifulsoup4
+httpx
