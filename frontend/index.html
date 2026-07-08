@@ -399,7 +399,7 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch(`http://127.0.0.1:8000/api/group_recommend`, {
+                const response = await fetch(`/group_recommend`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ usernames })
@@ -441,7 +441,7 @@
                 const cleanUsername = usernameInput.replace(/^https?:\/\/(www\.)?letterboxd\.com\//, '').replace(/\//g, '');
 
                 // Call the FastAPI backend running locally
-                const response = await fetch(`http://127.0.0.1:8000/api/recommend`, {
+                const response = await fetch(`/recommend`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

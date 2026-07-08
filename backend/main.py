@@ -36,7 +36,7 @@ async def serve_frontend():
     with open(frontend_path, "r", encoding="utf-8") as f:
         return f.read()
 
-@app.post("/api/recommend")
+@app.post("/recommend")
 async def recommend(request: RecommendRequest):
     username = extract_username(request.username_or_url)
     if not username:
@@ -64,7 +64,7 @@ async def recommend(request: RecommendRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/group_recommend")
+@app.post("/group_recommend")
 async def group_recommend(request: GroupRecommendRequest):
     usernames = [extract_username(u) for u in request.usernames if extract_username(u)]
     if len(usernames) < 2:

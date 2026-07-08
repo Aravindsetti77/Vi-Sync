@@ -28,8 +28,13 @@ async def get_recommendation(recent_watches, watchlist):
     for m in recent_watches:
         text = m.get('title', '')
         if m.get('rating') and m['rating'] != "N/A":
-            # If we had descriptions we would add them here. For now, titles and ratings.
-            text += f" (Rating: {m['rating']})"
+            text += f" (Rating: {m['rating']}) (Liked: {'Yes' if m.get('liked') else 'No'})"
+        if m.get('directors'):
+            text += f" Director: {', '.join(m['directors'])}."
+        if m.get('genres'):
+            text += f" Genres: {', '.join(m['genres'])}."
+        if m.get('description'):
+            text += f"\nDescription/Review: {m['description']}"
         recent_texts.append(text)
         
     # Embed the recent watches
@@ -40,7 +45,17 @@ async def get_recommendation(recent_watches, watchlist):
     user_vector = np.mean(recent_embeddings, axis=0).reshape(1, -1)
     
     # Embed the watchlist
-    watchlist_texts = [m.get('title', '') for m in watchlist]
+    watchlist_texts = []
+    for m in watchlist:
+        text = m.get('title', '')
+        if m.get('directors'):
+            text += f" Director: {', '.join(m['directors'])}."
+        if m.get('genres'):
+            text += f" Genres: {', '.join(m['genres'])}."
+        if m.get('description'):
+            text += f"\nDescription/Review: {m['description']}"
+        watchlist_texts.append(text)
+        
     watchlist_embeddings = model.encode(watchlist_texts)
     
     # Compute cosine similarities
