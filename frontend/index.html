@@ -461,7 +461,7 @@
                 errorMsg.textContent = error.message;
                 errorMsg.style.display = 'block';
                 if (error.message.includes("Failed to fetch")) {
-                    errorMsg.textContent = "Failed to connect to the backend server. Make sure the FastAPI app is running on port 8000.";
+                    errorMsg.textContent = "Failed to connect";
                 }
             } finally {
                 btn.disabled = false;
