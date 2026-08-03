@@ -12,10 +12,29 @@ async def get_movie_metadata(client, url, semaphore):
                 soup = BeautifulSoup(res.text, 'html.parser')
                 genres = list(dict.fromkeys([a.text for a in soup.find_all('a') if '/films/genre/' in a.get('href', '')]))
                 directors = list(dict.fromkeys([a.text for a in soup.find_all('a') if '/director/' in a.get('href', '')]))
-                return {"genres": genres, "directors": directors}
+                poster_url = None
+                script_tag = soup.find('script', {'type': 'application/ld+json'})
+                if script_tag:
+                    try:
+                        import json
+                        text = script_tag.text.strip()
+                        if text.startswith('/* <![CDATA[ */'):
+                            text = text.replace('/* <![CDATA[ */', '', 1)
+                        if text.endswith('/* ]]> */'):
+                            text = text.rsplit('/* ]]> */', 1)[0]
+                        data = json.loads(text)
+                        if 'image' in data:
+                            # 'image' might be a string or list, typically string
+                            if isinstance(data['image'], list) and len(data['image']) > 0:
+                                poster_url = data['image'][0]
+                            elif isinstance(data['image'], str):
+                                poster_url = data['image']
+                    except Exception:
+                        pass
+                return {"genres": genres, "directors": directors, "poster": poster_url}
         except Exception:
             pass
-        return {"genres": [], "directors": []}
+        return {"genres": [], "directors": [], "poster": None}
 
 async def get_recent_watches(username: str):
     """Fetches the last 20 watched/reviewed movies from RSS."""
@@ -69,6 +88,7 @@ async def get_recent_watches(username: str):
         for m, meta in zip(selected_movies, metadata_results):
             m["genres"] = meta["genres"]
             m["directors"] = meta["directors"]
+            m["poster"] = meta.get("poster")
             
     return selected_movies
 
@@ -145,5 +165,6 @@ async def get_watchlist(username: str, max_pages: int = 10):
         for m, meta in zip(watchlist_movies, metadata_results):
             m["genres"] = meta["genres"]
             m["directors"] = meta["directors"]
+            m["poster"] = meta.get("poster")
                     
     return watchlist_movies
