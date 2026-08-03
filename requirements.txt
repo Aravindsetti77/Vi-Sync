@@ -3,3 +3,11 @@ uvicorn
 feedparser
 beautifulsoup4
 httpx
+sentence-transformers
+scikit-learn
+numpy
+sqlalchemy
+aiomysql
+redis
+python-dotenv
+cryptography
