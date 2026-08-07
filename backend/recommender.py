@@ -9,7 +9,12 @@ _model = None
 def get_model():
     global _model
     if _model is None:
-        _model = SentenceTransformer('all-MiniLM-L6-v2')
+        _model = AutoModelForCausalLM.from_pretrained(
+        "all-MiniLM-L6-v2",        # Use .safetensors version
+        torch_dtype=torch.float16, # Half-precision (saves 50% RAM/Time)
+        low_cpu_mem_usage=True,    # Instant memory-mapping (mmap)
+        device_map="auto"          # Smartest hardware placement
+    )
     return _model
 
 async def get_recommendation(recent_watches, watchlist, skipped_links=None, cache_key=None):
