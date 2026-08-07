@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List
 from contextlib import asynccontextmanager
 from scraper import get_recent_watches, get_watchlist
-from recommender import get_recommendation
+from recommender import get_recommendation, warmup_model
 from database import init_db, AsyncSessionLocal, SkippedMovie
 from cache import close_cache
 from sqlalchemy.future import select
@@ -15,6 +15,9 @@ from sqlalchemy.future import select
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # Pre-load the sentence-transformer model at startup so the first
+    # request doesn't pay the ~5-10s model download + init cost
+    await asyncio.to_thread(warmup_model)
     yield
     await close_cache()
 
@@ -82,8 +85,11 @@ async def recommend(request: RecommendRequest, req: Request):
     try:
         skipped_links = await get_skipped_links(ip_address, cache_key)
         
-        recent_watches = await get_recent_watches(username)
-        watchlist = await get_watchlist(username)
+        # Scrape both in parallel — cuts wall-clock scrape time roughly in half
+        recent_watches, watchlist = await asyncio.gather(
+            get_recent_watches(username),
+            get_watchlist(username)
+        )
         
         if watchlist is None:
             raise HTTPException(status_code=404, detail="Watchlist not found or empty.")

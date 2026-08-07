@@ -26,5 +26,9 @@ async def get_cache(key: str) -> dict:
         return json.loads(data)
     return None
 
+async def delete_cache(key: str):
+    """Deletes a cache entry by key. Used for invalidation when data changes."""
+    await redis_client.delete(key)
+
 async def close_cache():
     await redis_client.close()

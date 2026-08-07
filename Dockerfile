@@ -7,6 +7,11 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY requirements.txt .
 RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
+# Pre-download the sentence-transformer model into the Docker image layer.
+# This means container restarts / rebuilds (when only code changes) won't
+# re-download ~80MB of model weights from HuggingFace.
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
 COPY . .
 
 EXPOSE 8000
