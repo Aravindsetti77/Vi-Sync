@@ -22,7 +22,7 @@ services:
           property: connectionString
 
   - type: web
-    name: boxd-frontend
+    name: syncboxd
     env: static
     buildCommand: ""
     staticPublishPath: ./frontend
