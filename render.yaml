@@ -26,7 +26,6 @@ services:
     env: static
     buildCommand: ""
     staticPublishPath: ./frontend
-    region: oregon
     envVars:
       - key: API_URL
         value: https://boxd-api.onrender.com
