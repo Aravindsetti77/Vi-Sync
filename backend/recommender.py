@@ -107,7 +107,8 @@ async def get_recommendation(recent_watches, watchlist, skipped_links=None, cach
         all_texts = recent_texts + watchlist_texts
         
         def run_embedding():
-            return np.array(list(model.embed(all_texts, batch_size=64)))
+            # Reduced batch size to 4 to prevent Out of Memory (OOM) crashes on 512MB instances
+            return np.array(list(model.embed(all_texts, batch_size=4)))
             
         all_embeddings = await asyncio.to_thread(run_embedding)
 
