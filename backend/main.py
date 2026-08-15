@@ -15,23 +15,35 @@ import logging
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    try:
-        await init_db()
-    except Exception as e:
-        logging.error(f"Database connection failed: {e}")
-        raise
+    # Retry database connection (Wait for DB to boot on Render)
+    for _ in range(12):
+        try:
+            await init_db()
+            logging.info("Database initialized successfully.")
+            break
+        except Exception as e:
+            logging.warning(f"Database connection failed, retrying in 5s... ({e})")
+            await asyncio.sleep(5)
+    else:
+        logging.error("Failed to connect to database after 60 seconds.")
         
-    cache_ok = await check_cache_health()
-    if not cache_ok:
-        logging.error("Redis cache connection failed.")
-        raise Exception("Redis Cache Connection Failed")
+    # Retry Redis connection
+    for _ in range(12):
+        cache_ok = await check_cache_health()
+        if cache_ok:
+            logging.info("Redis cache connected successfully.")
+            break
+        logging.warning("Redis cache connection failed, retrying in 5s...")
+        await asyncio.sleep(5)
+    else:
+        logging.error("Failed to connect to Redis cache after 60 seconds.")
         
     # Pre-load the fastembed model at startup
     try:
         await asyncio.to_thread(warmup_model)
+        logging.info("Model warmed up successfully.")
     except Exception as e:
         logging.error(f"Model initialization failed: {e}")
-        raise
 
     yield
     await close_cache()
