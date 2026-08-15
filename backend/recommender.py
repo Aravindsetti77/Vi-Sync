@@ -1,7 +1,7 @@
 import numpy as np
 import hashlib
 import asyncio
-from sentence_transformers import SentenceTransformer
+from fastembed import TextEmbedding
 from sklearn.metrics.pairwise import cosine_similarity
 from cache import get_cache, set_cache, delete_cache
 
@@ -11,14 +11,14 @@ _model = None
 def get_model():
     global _model
     if _model is None:
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
     return _model
 
 def warmup_model():
     """Pre-load the model and run a dummy encode to warm up all internal caches.
     Call this at application startup so the first real request is fast."""
     model = get_model()
-    model.encode(["warmup"], show_progress_bar=False)
+    list(model.embed(["warmup"]))
 
 def _compute_fingerprint(recent_watches, watchlist):
     """Create a hash fingerprint from the current watchlist and recent watches.
@@ -105,9 +105,11 @@ async def get_recommendation(recent_watches, watchlist, skipped_links=None, cach
         # Single batched encode — much faster than two separate encode() calls
         # because it avoids re-initializing internal tokenizer/model state twice
         all_texts = recent_texts + watchlist_texts
-        all_embeddings = await asyncio.to_thread(
-            model.encode, all_texts, show_progress_bar=False, batch_size=64
-        )
+        
+        def run_embedding():
+            return np.array(list(model.embed(all_texts, batch_size=64)))
+            
+        all_embeddings = await asyncio.to_thread(run_embedding)
 
         recent_embeddings = all_embeddings[:len(recent_texts)]
         watchlist_embeddings = all_embeddings[len(recent_texts):]

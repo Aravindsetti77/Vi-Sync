@@ -3,7 +3,7 @@ uvicorn
 feedparser
 beautifulsoup4
 httpx
-sentence-transformers
+fastembed
 scikit-learn
 numpy
 sqlalchemy

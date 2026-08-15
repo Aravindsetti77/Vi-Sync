@@ -500,7 +500,7 @@
                 errorMsg.textContent = error.message;
                 errorMsg.style.display = 'block';
                 if (error.message.includes("Failed to fetch")) {
-                    errorMsg.textContent = "Failed to connect";
+                    errorMsg.textContent = "Failed to connect to the server. Please try again later.";
                 }
             } finally {
                 btn.disabled = false;
@@ -550,9 +550,9 @@
                 errorMsg.textContent = error.message;
                 errorMsg.style.display = 'block';
 
-                // If there's a connection error (backend not running)
+                // If there's a connection error
                 if (error.message.includes("Failed to fetch")) {
-                    errorMsg.textContent = "Failed to connect to the backend server. Make sure the FastAPI app is running on port 8000.";
+                    errorMsg.textContent = "Failed to connect to the server. Please try again later.";
                 }
             } finally {
                 btn.disabled = false;
