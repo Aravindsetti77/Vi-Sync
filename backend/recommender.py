@@ -11,7 +11,7 @@ _model = None
 def get_model():
     global _model
     if _model is None:
-        _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2", threads=1)
     return _model
 
 def warmup_model():

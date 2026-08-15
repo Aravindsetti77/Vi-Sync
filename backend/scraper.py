@@ -80,7 +80,7 @@ async def get_recent_watches(username: str):
     selected_movies = liked_movies[:20] if liked_movies else recent_movies[:20]
     
     # Fetch metadata (genres, directors)
-    semaphore = asyncio.Semaphore(15)
+    semaphore = asyncio.Semaphore(5)
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"}
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
         tasks = [get_movie_metadata(client, m["link"], semaphore) for m in selected_movies]
@@ -92,7 +92,7 @@ async def get_recent_watches(username: str):
             
     return selected_movies
 
-async def get_watchlist(username: str, max_pages: int = 10):
+async def get_watchlist(username: str, max_pages: int = 3):
     watchlist_movies = []
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
@@ -159,7 +159,7 @@ async def get_watchlist(username: str, max_pages: int = 10):
                 watchlist_movies.extend(movies)
                 
         # Fetch metadata (genres, directors) for watchlist movies
-        semaphore = asyncio.Semaphore(15)
+        semaphore = asyncio.Semaphore(5)
         tasks = [get_movie_metadata(client, m["link"], semaphore) for m in watchlist_movies]
         metadata_results = await asyncio.gather(*tasks)
         for m, meta in zip(watchlist_movies, metadata_results):
