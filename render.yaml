@@ -1,0 +1,37 @@
+databases:
+  - name: boxd-db
+    databaseName: boxd
+    user: boxduser
+    plan: free
+
+services:
+  - type: web
+    name: boxd-api
+    env: docker
+    region: oregon
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: boxd-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: boxd-cache
+          property: connectionString
+
+  - type: web
+    name: boxd-frontend
+    env: static
+    buildCommand: ""
+    staticPublishPath: ./frontend
+    region: oregon
+    envVars:
+      - key: API_URL
+        value: https://boxd-api.onrender.com
+
+  - type: redis
+    name: boxd-cache
+    plan: free
+    ipAllowList: []

@@ -18,17 +18,18 @@ services:
       - .:/app
     
   db:
-    image: mysql:8.0
+    image: postgres:15-alpine
     container_name: boxd-db
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=boxd
+      - POSTGRES_USER=boxduser
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=boxd
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "pg_isready -U boxduser -d boxd"]
       interval: 10s
       timeout: 5s
       retries: 5

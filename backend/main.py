@@ -171,7 +171,7 @@ async def skip_movie(request: SkipRequest, req: Request):
     else:
         cache_key_id = f"group_{'_'.join(sorted(request.usernames))}"
         
-    # Save skip to MySQL
+    # Save skip to PostgreSQL
     async with AsyncSessionLocal() as session:
         skip_entry = SkippedMovie(ip_address=ip_address, username=cache_key_id, movie_link=request.movie_link)
         session.add(skip_entry)
@@ -197,7 +197,7 @@ async def unskip_movie(request: UnskipRequest, req: Request):
     else:
         cache_key_id = f"group_{'_'.join(sorted(request.usernames))}"
         
-    # Remove skip from MySQL
+    # Remove skip from PostgreSQL
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(SkippedMovie).where(

@@ -7,7 +7,7 @@ sentence-transformers
 scikit-learn
 numpy
 sqlalchemy
-aiomysql
+asyncpg
 redis
 python-dotenv
 cryptography
