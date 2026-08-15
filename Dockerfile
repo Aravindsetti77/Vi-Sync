@@ -7,6 +7,8 @@ RUN pip install --upgrade pip
 COPY requirements.txt .
 RUN pip install --default-timeout=1000 --no-cache-dir -r requirements.txt
 
+# Set cache path inside the app directory so it's accessible regardless of the user running the container
+ENV FASTEMBED_CACHE_PATH=/app/model_cache
 # Pre-download the fastembed model into the Docker image layer.
 # This means container restarts / rebuilds (when only code changes) won't
 # re-download ~80MB of model weights from HuggingFace.
