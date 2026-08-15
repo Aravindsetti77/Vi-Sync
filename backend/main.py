@@ -9,15 +9,30 @@ from contextlib import asynccontextmanager
 from scraper import get_recent_watches, get_watchlist
 from recommender import get_recommendation, warmup_model
 from database import init_db, AsyncSessionLocal, SkippedMovie
-from cache import close_cache
+from cache import close_cache, check_cache_health
 from sqlalchemy.future import select
+import logging
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
-    # Pre-load the sentence-transformer model at startup so the first
-    # request doesn't pay the ~5-10s model download + init cost
-    await asyncio.to_thread(warmup_model)
+    try:
+        await init_db()
+    except Exception as e:
+        logging.error(f"Database connection failed: {e}")
+        raise
+        
+    cache_ok = await check_cache_health()
+    if not cache_ok:
+        logging.error("Redis cache connection failed.")
+        raise Exception("Redis Cache Connection Failed")
+        
+    # Pre-load the fastembed model at startup
+    try:
+        await asyncio.to_thread(warmup_model)
+    except Exception as e:
+        logging.error(f"Model initialization failed: {e}")
+        raise
+
     yield
     await close_cache()
 

@@ -6,7 +6,22 @@ import numpy as np
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # decode_responses=False is useful for bytes, but we will use True to handle strings/JSON easily
-redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+redis_client = redis.from_url(
+    REDIS_URL, 
+    decode_responses=True,
+    socket_timeout=15,
+    socket_connect_timeout=15
+)
+
+async def check_cache_health():
+    """Ping Redis to ensure it's available."""
+    try:
+        await redis_client.ping()
+        return True
+    except Exception as e:
+        import logging
+        logging.error(f"Redis health check failed: {e}")
+        return False
 
 async def set_cache(key: str, data: dict, expire_seconds: int = 86400):
     """Stores data in Redis. Lists/arrays are json dumped."""
