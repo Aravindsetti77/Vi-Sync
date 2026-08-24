@@ -56,6 +56,11 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            overflow: hidden;
+        }
+
+        body.scrollable {
+            overflow-y: auto;
         }
 
         .container {
@@ -466,6 +471,8 @@
             loader.style.display = 'none';
             document.getElementById('loader-note').style.display = 'none';
             resultContainer.style.display = 'block';
+
+            document.body.classList.add('scrollable');
 
             void resultContainer.offsetWidth;
             resultContainer.classList.add('show');
