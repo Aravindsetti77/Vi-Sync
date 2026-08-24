@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from scraper import get_recent_watches, get_watchlist
 from recommender import get_recommendation, warmup_model
 from database import init_db, AsyncSessionLocal, SkippedMovie
-from cache import close_cache, check_cache_health
+from cache import close_cache, check_cache_health, get_cache
 from sqlalchemy.future import select
 import logging
 
