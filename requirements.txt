@@ -11,3 +11,4 @@ asyncpg
 redis
 python-dotenv
 cryptography
+aiomysql
