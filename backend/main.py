@@ -11,6 +11,7 @@ from recommender import get_recommendation, warmup_model
 from database import init_db, AsyncSessionLocal, SkippedMovie
 from cache import close_cache, check_cache_health, get_cache
 from sqlalchemy.future import select
+from sqlalchemy import delete
 import logging
 
 @asynccontextmanager
@@ -94,6 +95,16 @@ async def get_skipped_links(ip_address: str, cache_key_id: str) -> List[str]:
         )
         return [row[0] for row in result.all()]
 
+async def clear_skipped_links(ip_address: str, cache_key_id: str):
+    async with AsyncSessionLocal() as session:
+        await session.execute(
+            delete(SkippedMovie).where(
+                SkippedMovie.ip_address == ip_address,
+                SkippedMovie.username == cache_key_id
+            )
+        )
+        await session.commit()
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_frontend():
     frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "index.html")
@@ -113,7 +124,8 @@ async def recommend(request: RecommendRequest, req: Request):
         from scraper import get_user_state
         from recommender import _compute_fingerprint
         
-        skipped_links = await get_skipped_links(ip_address, cache_key)
+        await clear_skipped_links(ip_address, cache_key)
+        skipped_links = []
         
         user_state = await get_user_state(username)
         if not user_state:
@@ -156,7 +168,8 @@ async def group_recommend(request: GroupRecommendRequest, req: Request):
         from scraper import get_user_state
         from recommender import _compute_fingerprint
         
-        skipped_links = await get_skipped_links(ip_address, cache_key)
+        await clear_skipped_links(ip_address, cache_key)
+        skipped_links = []
         
         states = await asyncio.gather(*[get_user_state(u) for u in usernames])
         combined_state = {"rss": [], "watchlist": []}
