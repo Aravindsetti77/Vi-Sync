@@ -92,7 +92,35 @@ async def get_recent_watches(username: str):
             
     return selected_movies
 
-async def get_watchlist(username: str, max_pages: int = 3):
+async def get_user_state(username: str):
+    """Fetches a lightweight state of the user to determine if their data has changed.
+    Uses RSS (recent watches) and Watchlist Page 1."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    
+    async def fetch_rss():
+        rss_url = f"https://letterboxd.com/{username}/rss/"
+        feed = await asyncio.to_thread(feedparser.parse, rss_url)
+        return [entry.link for entry in feed.entries[:5]] # Just use top 5 links for state
+
+    async def fetch_watchlist_p1():
+        url = f"https://letterboxd.com/{username}/watchlist/page/1/"
+        async with httpx.AsyncClient(headers=headers, timeout=10.0) as client:
+            res = await client.get(url)
+            if res.status_code == 404:
+                return None
+            soup = BeautifulSoup(res.text, 'html.parser')
+            posters = soup.select('[data-film-slug], [data-item-slug]')
+            return [p.get('data-film-slug') or p.get('data-item-slug') for p in posters[:5]]
+
+    try:
+        rss_links, wl_links = await asyncio.gather(fetch_rss(), fetch_watchlist_p1())
+        if wl_links is None:
+            return None # Watchlist not found
+        return {"rss": rss_links, "watchlist": wl_links}
+    except Exception:
+        return None
+
+async def get_watchlist(username: str, max_pages: int = 10, max_movies: int = 80):
     watchlist_movies = []
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
@@ -146,8 +174,6 @@ async def get_watchlist(username: str, max_pages: int = 3):
         
         watchlist_movies.extend(page1_res[1])
         
-        # If page 1 was empty or didn't have a full page (usually 28 movies), we could stop,
-        # but to be safe and simple, we fetch the rest concurrently.
         if len(page1_res[1]) > 0:
             tasks = [fetch_page(client, page) for page in range(2, max_pages + 1)]
             results = await asyncio.gather(*tasks)
@@ -158,13 +184,28 @@ async def get_watchlist(username: str, max_pages: int = 3):
                     break
                 watchlist_movies.extend(movies)
                 
-        # Fetch metadata (genres, directors) for watchlist movies
+        # Deduplicate
+        seen_links = set()
+        unique_watchlist = []
+        for m in watchlist_movies:
+            if m["link"] not in seen_links:
+                seen_links.add(m["link"])
+                unique_watchlist.append(m)
+        
+        # Pick a random subset of up to max_movies from the FULL fetched watchlist
+        import random
+        if len(unique_watchlist) > max_movies:
+            selected_watchlist = random.sample(unique_watchlist, max_movies)
+        else:
+            selected_watchlist = unique_watchlist
+
+        # Fetch metadata (genres, directors) ONLY for the selected movies
         semaphore = asyncio.Semaphore(5)
-        tasks = [get_movie_metadata(client, m["link"], semaphore) for m in watchlist_movies]
+        tasks = [get_movie_metadata(client, m["link"], semaphore) for m in selected_watchlist]
         metadata_results = await asyncio.gather(*tasks)
-        for m, meta in zip(watchlist_movies, metadata_results):
+        for m, meta in zip(selected_watchlist, metadata_results):
             m["genres"] = meta["genres"]
             m["directors"] = meta["directors"]
             m["poster"] = meta.get("poster")
                     
-    return watchlist_movies
+    return selected_watchlist

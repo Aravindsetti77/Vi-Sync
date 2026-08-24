@@ -75,8 +75,8 @@ class UnskipRequest(BaseModel):
 def extract_username(input_str: str) -> str:
     input_str = input_str.strip().rstrip('/')
     if "letterboxd.com/" in input_str:
-        return input_str.split("letterboxd.com/")[-1].split('/')[0]
-    return input_str
+        return input_str.split("letterboxd.com/")[-1].split('/')[0].lower()
+    return input_str.lower()
 
 def get_client_ip(request: Request) -> str:
     forwarded = request.headers.get("X-Forwarded-For")
@@ -110,27 +110,33 @@ async def recommend(request: RecommendRequest, req: Request):
     cache_key = f"user_{username}"
     
     try:
+        from scraper import get_user_state
+        from recommender import _compute_fingerprint
+        
         skipped_links = await get_skipped_links(ip_address, cache_key)
         
-        # Scrape both in parallel — cuts wall-clock scrape time roughly in half
-        recent_watches, watchlist = await asyncio.gather(
-            get_recent_watches(username),
-            get_watchlist(username)
-        )
-        
-        if watchlist is None:
+        user_state = await get_user_state(username)
+        if not user_state:
             raise HTTPException(status_code=404, detail="Watchlist not found or empty.")
             
-        recommendation = await get_recommendation(recent_watches, watchlist, skipped_links, cache_key)
+        cached_data = await get_cache(cache_key)
+        current_fingerprint = _compute_fingerprint(user_state)
+        
+        if cached_data and cached_data.get('fingerprint') == current_fingerprint:
+            recent_watches, watchlist = None, None
+        else:
+            recent_watches, watchlist = await asyncio.gather(
+                get_recent_watches(username),
+                get_watchlist(username)
+            )
+            
+        recommendation, stats = await get_recommendation(recent_watches, watchlist, skipped_links, cache_key, current_fingerprint)
         
         return {
             "username": username,
             "usernames": [username],
             "recommendation": recommendation,
-            "stats": {
-                "recent_watches_count": len(recent_watches),
-                "watchlist_count": len(watchlist)
-            }
+            "stats": stats
         }
     except HTTPException:
         raise
@@ -147,43 +153,56 @@ async def group_recommend(request: GroupRecommendRequest, req: Request):
     cache_key = f"group_{'_'.join(sorted(usernames))}"
     
     try:
+        from scraper import get_user_state
+        from recommender import _compute_fingerprint
+        
         skipped_links = await get_skipped_links(ip_address, cache_key)
         
-        async def fetch_user_data(user):
-            rw = await get_recent_watches(user)
-            wl = await get_watchlist(user)
-            return rw, wl
-            
-        results = await asyncio.gather(*[fetch_user_data(u) for u in usernames])
-        
-        all_recent_watches = []
-        all_watchlists = []
-        
-        for rw, wl in results:
-            if rw:
-                all_recent_watches.extend(rw)
-            if wl:
-                all_watchlists.extend(wl)
+        states = await asyncio.gather(*[get_user_state(u) for u in usernames])
+        combined_state = {"rss": [], "watchlist": []}
+        for st in states:
+            if st:
+                combined_state["rss"].extend(st["rss"])
+                combined_state["watchlist"].extend(st["watchlist"])
                 
-        if not all_watchlists:
+        if not combined_state["watchlist"]:
             raise HTTPException(status_code=404, detail="No watchlists found or all watchlists are empty.")
             
-        seen_links = set()
-        unique_watchlist = []
-        for m in all_watchlists:
-            if m['link'] not in seen_links:
-                seen_links.add(m['link'])
-                unique_watchlist.append(m)
+        cached_data = await get_cache(cache_key)
+        current_fingerprint = _compute_fingerprint(combined_state)
+        
+        if cached_data and cached_data.get('fingerprint') == current_fingerprint:
+            all_recent_watches, unique_watchlist = None, None
+        else:
+            async def fetch_user_data(user):
+                rw = await get_recent_watches(user)
+                wl = await get_watchlist(user)
+                return rw, wl
                 
-        recommendation = await get_recommendation(all_recent_watches, unique_watchlist, skipped_links, cache_key)
+            results = await asyncio.gather(*[fetch_user_data(u) for u in usernames])
+            
+            all_recent_watches = []
+            all_watchlists = []
+            
+            for rw, wl in results:
+                if rw:
+                    all_recent_watches.extend(rw)
+                if wl:
+                    all_watchlists.extend(wl)
+                    
+            seen_links = set()
+            unique_watchlist = []
+            for m in all_watchlists:
+                if m['link'] not in seen_links:
+                    seen_links.add(m['link'])
+                    unique_watchlist.append(m)
+                    
+        recommendation, stats = await get_recommendation(all_recent_watches, unique_watchlist, skipped_links, cache_key, current_fingerprint)
         
         return {
             "usernames": usernames,
             "recommendation": recommendation,
-            "stats": {
-                "recent_watches_count": len(all_recent_watches),
-                "watchlist_count": len(unique_watchlist)
-            }
+            "stats": stats
         }
     except HTTPException:
         raise
@@ -206,7 +225,7 @@ async def skip_movie(request: SkipRequest, req: Request):
         
     skipped_links = await get_skipped_links(ip_address, cache_key_id)
     
-    recommendation = await get_recommendation(None, None, skipped_links=skipped_links, cache_key=cache_key_id)
+    recommendation, _ = await get_recommendation(None, None, skipped_links=skipped_links, cache_key=cache_key_id)
     
     if not recommendation:
         raise HTTPException(status_code=404, detail="No more movies to recommend or cache expired. Please search again.")

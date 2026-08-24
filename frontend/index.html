@@ -413,6 +413,13 @@
                 input.placeholder = `User ${index + 1}`;
             });
         }
+        
+        // Add Enter key support for group inputs
+        document.getElementById('group-inputs').addEventListener('keypress', function(e) {
+            if (e.target.classList.contains('group-username') && e.key === 'Enter') {
+                fetchGroupRecommendation();
+            }
+        });
 
         async function handleResponse(response, isHistoryPush = true) {
             if (!response.ok) {
