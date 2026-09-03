@@ -10,5 +10,4 @@ sqlalchemy
 asyncpg
 redis
 python-dotenv
-cryptography
-aiomysql
+cryptography

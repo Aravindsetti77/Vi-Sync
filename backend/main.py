@@ -1,15 +1,17 @@
 import os
 import asyncio
+import httpx
+from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from contextlib import asynccontextmanager
-from scraper import get_recent_watches, get_watchlist
-from recommender import get_recommendation, warmup_model
+from scraper import get_recent_watches, get_watchlist, get_user_state
+from recommender import get_recommendation, warmup_model, _compute_fingerprint
 from database import init_db, AsyncSessionLocal, SkippedMovie
-from cache import close_cache, check_cache_health, get_cache
+from cache import close_cache, check_cache_health, get_cache, set_cache
 from sqlalchemy.future import select
 from sqlalchemy import delete
 import logging
@@ -114,9 +116,6 @@ async def serve_frontend():
 @app.get("/avatar/{username}")
 async def get_avatar(username: str):
     """Attempt to scrape the user's avatar. Returns a placeholder if blocked by Cloudflare."""
-    import httpx
-    from bs4 import BeautifulSoup
-    
     cache_key = f"avatar_{username}"
     cached = await get_cache(cache_key)
     if cached:
@@ -161,9 +160,6 @@ async def recommend(request: RecommendRequest, req: Request):
     cache_key = f"user_{username}"
     
     try:
-        from scraper import get_user_state
-        from recommender import _compute_fingerprint
-        
         await clear_skipped_links(ip_address, cache_key)
         skipped_links = []
         
@@ -205,9 +201,6 @@ async def group_recommend(request: GroupRecommendRequest, req: Request):
     cache_key = f"group_{'_'.join(sorted(usernames))}"
     
     try:
-        from scraper import get_user_state
-        from recommender import _compute_fingerprint
-        
         await clear_skipped_links(ip_address, cache_key)
         skipped_links = []
         

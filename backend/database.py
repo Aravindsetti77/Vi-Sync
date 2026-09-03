@@ -13,11 +13,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 elif DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-connect_args = {}
-if "asyncpg" in DATABASE_URL:
-    connect_args = {"command_timeout": 15, "timeout": 15}
-elif "aiomysql" in DATABASE_URL:
-    connect_args = {"connect_timeout": 15}
+connect_args = {"command_timeout": 15, "timeout": 15}
 
 engine = create_async_engine(
     DATABASE_URL, 

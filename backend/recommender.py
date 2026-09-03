@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import hashlib
 import asyncio
@@ -15,31 +16,26 @@ MODEL_CACHE_DIR = "local_model_cache"
 def get_model():
     global _model
     if _model is None:
-        import os
-        
-        # Check if a custom ONNX converted model exists locally
+        # Check if a custom ONNX converted model exists locally (via export.py)
         if os.path.exists(LOCAL_MODEL_PATH) and os.path.isdir(LOCAL_MODEL_PATH):
             from fastembed.common.model_description import ModelSource, PoolingType
             model_name = "custom-local-model"
-            
             try:
                 TextEmbedding.add_custom_model(
                     model=model_name,
                     pooling=PoolingType.MEAN,
                     normalization=True,
-                    sources=ModelSource(hf=""), 
-                    dim=384, # Adjust to your local model's embedding dimension
+                    sources=ModelSource(hf=""),
+                    dim=384,  # Adjust to your local model's embedding dimension
                     model_file="model.onnx",
                 )
             except ValueError:
-                pass # Already registered
-                
+                pass  # Already registered
             _model = TextEmbedding(model_name=model_name, cache_dir=LOCAL_MODEL_PATH, threads=1)
         else:
-            # Fallback to the standard model, but cached locally to prevent startup downloads
+            # Fallback: use the standard model, cached locally to prevent re-downloads
             cache_dir = MODEL_CACHE_DIR if os.path.exists(MODEL_CACHE_DIR) else None
             _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2", cache_dir=cache_dir, threads=1)
-            
     return _model
 
 def warmup_model():
