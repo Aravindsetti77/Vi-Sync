@@ -8,10 +8,38 @@ from cache import get_cache, set_cache, delete_cache
 # Initialize the model lazily to avoid heavy loading on startup if not immediately used
 _model = None
 
+# If you convert your custom model using the export.py script, point this path to the ONNX folder
+LOCAL_MODEL_PATH = "onnx_model" 
+MODEL_CACHE_DIR = "local_model_cache"
+
 def get_model():
     global _model
     if _model is None:
-        _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2", threads=1)
+        import os
+        
+        # Check if a custom ONNX converted model exists locally
+        if os.path.exists(LOCAL_MODEL_PATH) and os.path.isdir(LOCAL_MODEL_PATH):
+            from fastembed.common.model_description import ModelSource, PoolingType
+            model_name = "custom-local-model"
+            
+            try:
+                TextEmbedding.add_custom_model(
+                    model=model_name,
+                    pooling=PoolingType.MEAN,
+                    normalization=True,
+                    sources=ModelSource(hf=""), 
+                    dim=384, # Adjust to your local model's embedding dimension
+                    model_file="model.onnx",
+                )
+            except ValueError:
+                pass # Already registered
+                
+            _model = TextEmbedding(model_name=model_name, cache_dir=LOCAL_MODEL_PATH, threads=1)
+        else:
+            # Fallback to the standard model, but cached locally to prevent startup downloads
+            cache_dir = MODEL_CACHE_DIR if os.path.exists(MODEL_CACHE_DIR) else None
+            _model = TextEmbedding(model_name="sentence-transformers/all-MiniLM-L6-v2", cache_dir=cache_dir, threads=1)
+            
     return _model
 
 def warmup_model():

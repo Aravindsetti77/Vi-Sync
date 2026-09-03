@@ -73,3 +73,6 @@ letterboxd/
 .Trashes
 ehthumbs.db
 Thumbs.db
+# Local Model Cache
+onnx_model/
+local_model_cache/
