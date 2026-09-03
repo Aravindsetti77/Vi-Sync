@@ -362,7 +362,7 @@
         </div>
 
         <div class="loader-container" id="loader-container">
-            <img class="loader-avatar" id="loader-avatar" src="https://s.ltrbxd.com/static/img/avatar-default.png" alt="User Avatar" />
+            <img class="loader-avatar" id="loader-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='22' fill='%23666'/%3E%3Cellipse cx='50' cy='92' rx='38' ry='26' fill='%23666'/%3E%3C/svg%3E" alt="" />
             <div class="loader" id="loader"></div>
         </div>
         <div id="loader-note" style="display: none; color: var(--muted-text); margin-top: 1rem; font-size: 0.95rem; font-style: italic;">(First searches may take a minute while we initialize the AI model. Thanks for waiting!)</div>
@@ -535,7 +535,7 @@
             currentHistoryIndex = -1;
 
             const avatarImg = document.getElementById('loader-avatar');
-            avatarImg.src = "https://s.ltrbxd.com/static/img/avatar-default.png";
+            avatarImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='22' fill='%23666'/%3E%3Cellipse cx='50' cy='92' rx='38' ry='26' fill='%23666'/%3E%3C/svg%3E";
             fetch(`${API_BASE_URL}/avatar/${usernames[0]}`)
                 .then(res => res.json())
                 .then(data => { if (data.avatar) avatarImg.src = data.avatar; })
@@ -586,7 +586,7 @@
             const cleanUsername = usernameInput.replace(/^https?:\/\/(www\.)?letterboxd\.com\//, '').replace(/\//g, '');
             
             const avatarImg = document.getElementById('loader-avatar');
-            avatarImg.src = "https://s.ltrbxd.com/static/img/avatar-default.png";
+            avatarImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='22' fill='%23666'/%3E%3Cellipse cx='50' cy='92' rx='38' ry='26' fill='%23666'/%3E%3C/svg%3E";
             fetch(`${API_BASE_URL}/avatar/${cleanUsername}`)
                 .then(res => res.json())
                 .then(data => { if (data.avatar) avatarImg.src = data.avatar; })

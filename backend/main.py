@@ -128,26 +128,24 @@ async def get_avatar(username: str):
         "Accept-Language": "en-US,en;q=0.5"
     }
     
-    avatar_url = "https://s.ltrbxd.com/static/img/avatar-default.png" # Fallback
+    avatar_url = None  # None means no real avatar found; frontend keeps its SVG placeholder
     try:
         async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=5.0) as client:
             res = await client.get(url)
             if res.status_code == 200:
                 soup = BeautifulSoup(res.text, 'html.parser')
-                # Look for the avatar in the meta tags or img
                 og_image = soup.find('meta', property='og:image')
                 if og_image and 'default-share' not in og_image.get('content', ''):
                     avatar_url = og_image['content']
                 else:
-                    # Sometimes it's a specific class
                     img = soup.find('img', alt=lambda x: x and 'avatar' in x.lower())
                     if img and img.get('src'):
                         avatar_url = img['src']
     except Exception:
         pass
         
-    # Cache for 24 hours
-    await set_cache(cache_key, avatar_url, 86400)
+    # Cache for 24 hours (even a None result, to avoid repeated failed fetches)
+    await set_cache(cache_key, avatar_url or "", 86400)
     return {"avatar": avatar_url}
 
 @app.post("/recommend")
