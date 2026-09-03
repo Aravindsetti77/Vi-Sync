@@ -263,43 +263,16 @@
             color: var(--accent);
         }
 
-        /* Loading Spinner Container */
-        .loader-container {
-            display: none;
-            position: relative;
-            width: 90px;
-            height: 90px;
-            margin: 3rem auto;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loader-avatar {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid var(--border-color);
-            background-color: var(--card-bg);
-            z-index: 1;
-        }
-
         /* Loading Spinner */
         .loader {
-            position: absolute;
-            top: 0;
-            left: 0;
-            border: 4px solid #f3f3f3;
+            display: none;
+            border: 3px solid #f3f3f3;
             border-left-color: var(--accent);
             border-radius: 50%;
-            width: 100%;
-            height: 100%;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            z-index: 2;
+            margin: 2rem auto;
         }
 
         @keyframes spin {
@@ -361,10 +334,7 @@
             </div>
         </div>
 
-        <div class="loader-container" id="loader-container">
-            <img class="loader-avatar" id="loader-avatar" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='22' fill='%23666'/%3E%3Cellipse cx='50' cy='92' rx='38' ry='26' fill='%23666'/%3E%3C/svg%3E" alt="" />
-            <div class="loader" id="loader"></div>
-        </div>
+        <div class="loader" id="loader"></div>
         <div id="loader-note" style="display: none; color: var(--muted-text); margin-top: 1rem; font-size: 0.95rem; font-style: italic;">(First searches may take a minute while we initialize the AI model. Thanks for waiting!)</div>
         <div class="error" id="error-msg"></div>
 
@@ -498,10 +468,10 @@
             
             document.getElementById('prev-btn').style.display = currentHistoryIndex > 0 ? 'inline-block' : 'none';
 
-            const loaderContainer = document.getElementById('loader-container');
+            const loader = document.getElementById('loader');
             const resultContainer = document.getElementById('result-container');
 
-            loaderContainer.style.display = 'none';
+            loader.style.display = 'none';
             document.getElementById('loader-note').style.display = 'none';
             resultContainer.style.display = 'block';
 
@@ -514,7 +484,7 @@
         async function fetchGroupRecommendation() {
             const inputs = document.querySelectorAll('.group-username');
             const usernames = Array.from(inputs).map(i => i.value.trim()).filter(v => v);
-            const loaderContainer = document.getElementById('loader-container');
+            const loader = document.getElementById('loader');
             const resultContainer = document.getElementById('result-container');
             const errorMsg = document.getElementById('error-msg');
             const btn = document.getElementById('group-submit-btn');
@@ -528,18 +498,11 @@
             // Reset UI State
             errorMsg.style.display = 'none';
             resultContainer.classList.remove('show');
-            loaderContainer.style.display = 'flex';
+            loader.style.display = 'block';
             document.getElementById('loader-note').style.display = 'block';
             btn.disabled = true;
             recHistory = [];
             currentHistoryIndex = -1;
-
-            const avatarImg = document.getElementById('loader-avatar');
-            avatarImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='22' fill='%23666'/%3E%3Cellipse cx='50' cy='92' rx='38' ry='26' fill='%23666'/%3E%3C/svg%3E";
-            fetch(`${API_BASE_URL}/avatar/${usernames[0]}`)
-                .then(res => res.json())
-                .then(data => { if (data.avatar) avatarImg.src = data.avatar; })
-                .catch(() => {});
 
             try {
                 const response = await fetch(`${API_BASE_URL}/group_recommend`, {
@@ -549,7 +512,7 @@
                 });
                 await handleResponse(response);
             } catch (error) {
-                loaderContainer.style.display = 'none';
+                loader.style.display = 'none';
                 document.getElementById('loader-note').style.display = 'none';
                 errorMsg.textContent = error.message;
                 errorMsg.style.display = 'block';
@@ -563,7 +526,7 @@
 
         async function fetchRecommendation() {
             const usernameInput = document.getElementById('username').value.trim();
-            const loaderContainer = document.getElementById('loader-container');
+            const loader = document.getElementById('loader');
             const resultContainer = document.getElementById('result-container');
             const errorMsg = document.getElementById('error-msg');
             const btn = document.getElementById('submit-btn');
@@ -577,22 +540,16 @@
             // Reset UI State
             errorMsg.style.display = 'none';
             resultContainer.classList.remove('show');
-            loaderContainer.style.display = 'flex';
+            loader.style.display = 'block';
             document.getElementById('loader-note').style.display = 'block';
             btn.disabled = true;
             recHistory = [];
             currentHistoryIndex = -1;
 
-            const cleanUsername = usernameInput.replace(/^https?:\/\/(www\.)?letterboxd\.com\//, '').replace(/\//g, '');
-            
-            const avatarImg = document.getElementById('loader-avatar');
-            avatarImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='38' r='22' fill='%23666'/%3E%3Cellipse cx='50' cy='92' rx='38' ry='26' fill='%23666'/%3E%3C/svg%3E";
-            fetch(`${API_BASE_URL}/avatar/${cleanUsername}`)
-                .then(res => res.json())
-                .then(data => { if (data.avatar) avatarImg.src = data.avatar; })
-                .catch(() => {});
-
             try {
+                // Remove 'https://' if the user pasted a full URL
+                const cleanUsername = usernameInput.replace(/^https?:\/\/(www\.)?letterboxd\.com\//, '').replace(/\//g, '');
+
                 // Call the FastAPI backend running on Render
                 const response = await fetch(`${API_BASE_URL}/recommend`, {
                     method: 'POST',
@@ -605,7 +562,7 @@
                 await handleResponse(response);
 
             } catch (error) {
-                loaderContainer.style.display = 'none';
+                loader.style.display = 'none';
                 document.getElementById('loader-note').style.display = 'none';
                 errorMsg.textContent = error.message;
                 errorMsg.style.display = 'block';
@@ -643,7 +600,7 @@
         }
         
         async function skipMovie() {
-            const loaderContainer = document.getElementById('loader-container');
+            const loader = document.getElementById('loader');
             const resultContainer = document.getElementById('result-container');
             const errorMsg = document.getElementById('error-msg');
             const skipBtn = document.getElementById('skip-btn');
@@ -652,7 +609,7 @@
 
             errorMsg.style.display = 'none';
             resultContainer.classList.remove('show');
-            loaderContainer.style.display = 'flex';
+            loader.style.display = 'block';
             skipBtn.disabled = true;
 
             try {
@@ -663,7 +620,7 @@
                 });
                 await handleResponse(response);
             } catch (error) {
-                loaderContainer.style.display = 'none';
+                loader.style.display = 'none';
                 errorMsg.textContent = error.message;
                 errorMsg.style.display = 'block';
             } finally {

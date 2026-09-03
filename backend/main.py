@@ -1,17 +1,15 @@
 import os
 import asyncio
-import httpx
-from bs4 import BeautifulSoup
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List
 from contextlib import asynccontextmanager
-from scraper import get_recent_watches, get_watchlist, get_user_state
-from recommender import get_recommendation, warmup_model, _compute_fingerprint
+from scraper import get_recent_watches, get_watchlist
+from recommender import get_recommendation, warmup_model
 from database import init_db, AsyncSessionLocal, SkippedMovie
-from cache import close_cache, check_cache_health, get_cache, set_cache
+from cache import close_cache, check_cache_health, get_cache
 from sqlalchemy.future import select
 from sqlalchemy import delete
 import logging
@@ -113,41 +111,6 @@ async def serve_frontend():
     with open(frontend_path, "r", encoding="utf-8") as f:
         return f.read()
 
-@app.get("/avatar/{username}")
-async def get_avatar(username: str):
-    """Attempt to scrape the user's avatar. Returns a placeholder if blocked by Cloudflare."""
-    cache_key = f"avatar_{username}"
-    cached = await get_cache(cache_key)
-    if cached:
-        return {"avatar": cached}
-        
-    url = f"https://letterboxd.com/{username}/"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5"
-    }
-    
-    avatar_url = None  # None means no real avatar found; frontend keeps its SVG placeholder
-    try:
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=5.0) as client:
-            res = await client.get(url)
-            if res.status_code == 200:
-                soup = BeautifulSoup(res.text, 'html.parser')
-                og_image = soup.find('meta', property='og:image')
-                if og_image and 'default-share' not in og_image.get('content', ''):
-                    avatar_url = og_image['content']
-                else:
-                    img = soup.find('img', alt=lambda x: x and 'avatar' in x.lower())
-                    if img and img.get('src'):
-                        avatar_url = img['src']
-    except Exception:
-        pass
-        
-    # Cache for 24 hours (even a None result, to avoid repeated failed fetches)
-    await set_cache(cache_key, avatar_url or "", 86400)
-    return {"avatar": avatar_url}
-
 @app.post("/recommend")
 async def recommend(request: RecommendRequest, req: Request):
     username = extract_username(request.username_or_url)
@@ -158,6 +121,9 @@ async def recommend(request: RecommendRequest, req: Request):
     cache_key = f"user_{username}"
     
     try:
+        from scraper import get_user_state
+        from recommender import _compute_fingerprint
+        
         await clear_skipped_links(ip_address, cache_key)
         skipped_links = []
         
@@ -199,6 +165,9 @@ async def group_recommend(request: GroupRecommendRequest, req: Request):
     cache_key = f"group_{'_'.join(sorted(usernames))}"
     
     try:
+        from scraper import get_user_state
+        from recommender import _compute_fingerprint
+        
         await clear_skipped_links(ip_address, cache_key)
         skipped_links = []
         
